@@ -21,7 +21,7 @@ jobs:
           export THEOS=$HOME/theos
           brew install ldid 
           make 
-          install_name_tool -delete_rpath '@executable_path/../../Tweaks' .theos/obj/debug/SpotifyEQ10.dylib
+          
       
 
       - name: Upload dylib

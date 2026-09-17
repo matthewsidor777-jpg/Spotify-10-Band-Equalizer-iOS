@@ -18,9 +18,10 @@ jobs:
 
       - name: Build
         run: |
-          export THEOS=$HOME/theos
-          brew install ldid 
-          make 
+          export THEOS=$HOME/theos 
+          make TARGET_CODESIGN=/usr/bin/true
+        
+        
           
       
 

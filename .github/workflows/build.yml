@@ -19,7 +19,9 @@ jobs:
       - name: Build
         run: |
           export THEOS=$HOME/theos
+          brew install ldid 
           make
+      
 
       - name: Upload dylib
         uses: actions/upload-artifact@v4

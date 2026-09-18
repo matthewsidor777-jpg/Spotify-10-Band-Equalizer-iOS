@@ -111,7 +111,7 @@ static NSArray* new_values(id self, SEL _cmd) {
 
 // Стандартные частоты 10-полосного EQ
 static NSArray* getStandardFrequencies(void) {
-    return @[@(31), @(63), @(125), @(250), @(500), @(1000), @(2000), @(4000), @(8000), @(16000)];
+    return @[@(47), @(60), @(100), @(225), @(475), @(1200), @(2200), @(4000), @(8000), @(14000)];
 }
 
 static BOOL bandsDumped = NO;

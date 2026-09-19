@@ -274,24 +274,39 @@ static void init(void) {
 }
 
 __attribute__((constructor))
-static void inspectEqualizerMethod(void) {
+static void inspectEqualizerMethods(void) {
     dispatch_async(dispatch_get_main_queue(), ^{
         for (int i = 0; i < 100; i++) {
             Class cls = NSClassFromString(@"SPTEqualizerModel");
+
             if (cls) {
-                SEL sel = NSSelectorFromString(@"applyEqualizerToAudioUnit:");
-                if ([cls instancesRespondToSelector:sel]) {
-                    Method m = class_getInstanceMethod(cls, sel);
-                    if (m) {
-                        const char *types = method_getTypeEncoding(m);
-                        NSLog(@"[SpotifyEQ10] applyEqualizerToAudioUnit: TYPE = %s", types);
+                NSArray *selectors = @[
+                    @"applyEqualizer:",
+                    @"applyCoreEqualizer",
+                    @"applyEqualizerToAudioUnit:",
+                    @"applyEqualizerToDriver:"
+                ];
+
+                NSLog(@"[SpotifyEQ10] ===== METHOD SIGNATURES =====");
+
+                for (NSString *name in selectors) {
+                    SEL sel = NSSelectorFromString(name);
+                    Method method = class_getInstanceMethod(cls, sel);
+
+                    if (method) {
+                        const char *types = method_getTypeEncoding(method);
+                        NSLog(@"[SpotifyEQ10] %@ -> %s", name, types);
+                    } else {
+                        NSLog(@"[SpotifyEQ10] %@ -> NOT FOUND", name);
                     }
-                } else {
-                    NSLog(@"[SpotifyEQ10] applyEqualizerToAudioUnit: NOT FOUND on SPTEqualizerModel");
                 }
+
+                NSLog(@"[SpotifyEQ10] =============================");
                 break;
             }
+
             [NSThread sleepForTimeInterval:0.1];
         }
     });
 }
+

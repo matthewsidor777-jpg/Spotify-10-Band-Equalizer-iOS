@@ -70,16 +70,29 @@ static IMP orig_bands = NULL;
 // SPTEqualizerModel setValues:
 static void new_setValues(id self, SEL _cmd, NSArray *values) {
     NSLog(@"[SpotifyEQ10] setValues: input count=%lu", (unsigned long)values.count);
-    
-    NSArray *expanded = expandTo10(values);
-    NSLog(@"[SpotifyEQ10] setValues: expanded to %lu", (unsigned long)expanded.count);
-    
+
+    // Let Spotify's original model process its native band count first.
     if (orig_setValues) {
-        ((void(*)(id,SEL,NSArray*))orig_setValues)(self, _cmd, expanded);
+        ((void(*)(id,SEL,NSArray*))orig_setValues)(self, _cmd, values);
     }
-    
-    // Также напрямую заменяем ivar
-    expandArrayIvar(self, "_values", CUSTOM_BAND_COUNT);
+
+    // Replace the stored values with our 10-band values.
+    NSArray *expanded = expandTo10(values);
+    Ivar valuesIvar = class_getInstanceVariable([self class], "_values");
+    if (valuesIvar) {
+        object_setIvar(self, valuesIvar, expanded);
+    }
+
+    NSLog(@"[SpotifyEQ10] setValues: stored %lu bands", (unsigned long)expanded.count);
+
+    // Ask Spotify's own audio engine to apply the current EQ state.
+    SEL applySEL = NSSelectorFromString(@"applyCoreEqualizer");
+    if ([self respondsToSelector:applySEL]) {
+        NSLog(@"[SpotifyEQ10] Calling Spotify applyCoreEqualizer");
+        ((void(*)(id,SEL))objc_msgSend)(self, applySEL);
+    } else {
+        NSLog(@"[SpotifyEQ10] applyCoreEqualizer not found");
+    }
 }
 
 // SPTEqualizerModel values
@@ -120,36 +133,34 @@ static BOOL bandsDumped = NO;
 static NSArray* new_bands(id self, SEL _cmd) {
     Class cls = [self class];
     Ivar ivar = class_getInstanceVariable(cls, "_bands");
-    
+
     NSArray *result = nil;
-    
+
     if (ivar) {
         result = object_getIvar(self, ivar);
     }
-    
+
     if (!result && orig_bands) {
         result = ((NSArray*(*)(id,SEL))orig_bands)(self, _cmd);
     }
-    
-    // Логируем оригинальные значения один раз
+
+    // Log Spotify's original band objects once.
     if (!bandsDumped && result.count > 0) {
         bandsDumped = YES;
         NSLog(@"[SpotifyEQ10] ========== ORIGINAL BANDS ==========");
         NSLog(@"[SpotifyEQ10] Class: %@", NSStringFromClass([result[0] class]));
+        NSLog(@"[SpotifyEQ10] Count: %lu", (unsigned long)result.count);
         NSLog(@"[SpotifyEQ10] Values: %@", result);
         NSLog(@"[SpotifyEQ10] =====================================");
     }
-    
-    // _bands это просто массив NSNumber с частотами
-    // Заменяем на наши 10 частот
+
+    // IMPORTANT:
+    // Keep Spotify's original _bands ivar untouched.
+    // Return our 10 frequencies to the UI only.
     NSArray *frequencies = getStandardFrequencies();
-    
-    // Сохраняем обратно в ivar
-    if (ivar) {
-        object_setIvar(self, ivar, frequencies);
-    }
-    
-    NSLog(@"[SpotifyEQ10] bands: returning 10 frequencies");
+
+    NSLog(@"[SpotifyEQ10] bands: returning 10 frequencies without replacing _bands");
+
     return frequencies;
 }
 

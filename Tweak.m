@@ -199,42 +199,65 @@ static void installHook(Class cls, SEL sel, IMP newImp, IMP *origImp) {
 // MARK: - Constructor
 // ============================================
 
+static void installSpotifyEQHooks(void) {
+    Class modelClass = NSClassFromString(@"SPTEqualizerModel");
+
+    if (!modelClass) {
+        NSLog(@"[SpotifyEQ10] SPTEqualizerModel not loaded yet; retrying...");
+        return;
+    }
+
+    static BOOL installed = NO;
+    if (installed) return;
+    installed = YES;
+
+    NSLog(@"[SpotifyEQ10] SPTEqualizerModel found! Installing hooks...");
+
+    installHook(modelClass,
+               NSSelectorFromString(@"setValues:"),
+               (IMP)new_setValues,
+               &orig_setValues);
+
+    installHook(modelClass,
+               NSSelectorFromString(@"values"),
+               (IMP)new_values,
+               &orig_values);
+
+    installHook(modelClass,
+               NSSelectorFromString(@"bands"),
+               (IMP)new_bands,
+               &orig_bands);
+
+    installHook(modelClass,
+               NSSelectorFromString(@"initWithLocalSettings:audioDriverController:connectManager:remoteConfigurationProperties:preferences:"),
+               (IMP)new_initWithLocalSettings,
+               &orig_initWithLocalSettings);
+
+    NSLog(@"[SpotifyEQ10] Init complete!");
+}
+
 __attribute__((constructor))
 static void init(void) {
     NSLog(@"[SpotifyEQ10] =====================================");
-    NSLog(@"[SpotifyEQ10] Tweak loaded! Version 4.0");
+    NSLog(@"[SpotifyEQ10] Tweak loaded! Version 5.0");
     NSLog(@"[SpotifyEQ10] =====================================");
-    
-    // Hook SPTEqualizerModel
-    Class modelClass = NSClassFromString(@"SPTEqualizerModel");
-    if (modelClass) {
-        // Hook setValues:
-        installHook(modelClass, 
-                   NSSelectorFromString(@"setValues:"), 
-                   (IMP)new_setValues, 
-                   &orig_setValues);
-        
-        // Hook values
-        installHook(modelClass,
-                   NSSelectorFromString(@"values"),
-                   (IMP)new_values,
-                   &orig_values);
-        
-        // Hook bands
-        installHook(modelClass,
-                   NSSelectorFromString(@"bands"),
-                   (IMP)new_bands,
-                   &orig_bands);
-        
-        // Hook init
-        installHook(modelClass,
-                   NSSelectorFromString(@"initWithLocalSettings:audioDriverController:connectManager:remoteConfigurationProperties:preferences:"),
-                   (IMP)new_initWithLocalSettings,
-                   &orig_initWithLocalSettings);
-                   
-    } else {
-        NSLog(@"[SpotifyEQ10] SPTEqualizerModel not found!");
+
+    installSpotifyEQHooks();
+
+    if (!NSClassFromString(@"SPTEqualizerModel")) {
+        dispatch_queue_t queue = dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0);
+
+        dispatch_async(queue, ^{
+            for (int i = 0; i < 100; i++) {
+                [NSThread sleepForTimeInterval:0.1];
+
+                if (NSClassFromString(@"SPTEqualizerModel")) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        installSpotifyEQHooks();
+                    });
+                    break;
+                }
+            }
+        });
     }
-    
-    NSLog(@"[SpotifyEQ10] Init complete!");
 }

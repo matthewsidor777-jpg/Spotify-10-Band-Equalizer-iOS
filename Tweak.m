@@ -261,3 +261,26 @@ static void init(void) {
         });
     }
 }
+
+__attribute__((constructor))
+static void inspectEqualizerMethod(void) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        for (int i = 0; i < 100; i++) {
+            Class cls = NSClassFromString(@"SPTEqualizerModel");
+            if (cls) {
+                SEL sel = NSSelectorFromString(@"applyEqualizerToAudioUnit:");
+                if ([cls instancesRespondToSelector:sel]) {
+                    Method m = class_getInstanceMethod(cls, sel);
+                    if (m) {
+                        const char *types = method_getTypeEncoding(m);
+                        NSLog(@"[SpotifyEQ10] applyEqualizerToAudioUnit: TYPE = %s", types);
+                    }
+                } else {
+                    NSLog(@"[SpotifyEQ10] applyEqualizerToAudioUnit: NOT FOUND on SPTEqualizerModel");
+                }
+                break;
+            }
+            [NSThread sleepForTimeInterval:0.1];
+        }
+    });
+}

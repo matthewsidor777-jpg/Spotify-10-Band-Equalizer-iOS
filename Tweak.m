@@ -86,10 +86,10 @@ static void new_setValues(id self, SEL _cmd, NSArray *values) {
     NSLog(@"[SpotifyEQ10] setValues: stored %lu bands", (unsigned long)expanded.count);
 
     // Ask Spotify's own audio engine to apply the current EQ state.
-    SEL applySEL = NSSelectorFromString(@"applyCoreEqualizer");
+    SEL applySEL = NSSelectorFromString(@"applyEqualizer:");
     if ([self respondsToSelector:applySEL]) {
         NSLog(@"[SpotifyEQ10] Calling Spotify applyCoreEqualizer");
-        ((void(*)(id,SEL))objc_msgSend)(self, applySEL);
+        ((void(*)(id,SEL,BOOL))objc_msgSend)(self, applySEL, YES);
     } else {
         NSLog(@"[SpotifyEQ10] applyCoreEqualizer not found");
     }
